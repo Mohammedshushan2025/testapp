@@ -1,0 +1,38 @@
+workflows:
+  ios-workflow:
+    name: iOS Build
+    instance_type: mac_mini_m1
+    max_build_duration: 120
+    integrations:
+      app_store_connect: codemagic_integration
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Set up keychain
+        script: keychain initialize
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files com.ascon.testapp \
+            --type IOS_APP_STORE \
+            --create
+      - name: Set up signing certificate
+        script: keychain add-certificates
+      - name: Set up code signing settings on Xcode project
+        script: xcode-project use-profiles
+      - name: Get Flutter packages
+        script: flutter packages pub get
+      - name: Build iOS (Release)
+        script: |
+          flutter build ipa \
+            --release \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - App Store Connect Users
